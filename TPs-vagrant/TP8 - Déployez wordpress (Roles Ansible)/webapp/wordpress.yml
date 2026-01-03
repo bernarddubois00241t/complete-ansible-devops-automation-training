@@ -1,40 +1,57 @@
----
 - hosts: prod
   become: true
   vars:
-    system_user: vagrant
-    compose_binary_dir: /bin
-  vars_files:
-    - files/secrets/credentials.vault
+    ansible_sudo_pass: admin
+    system_user: admin
+    compose_binary_dir: /usr/local/bin
+
   pre_tasks:
     - name: create www data
-      user: 
-        name:  www-data
+      user:
+        name: www-data
         state: present
 
-    - name: Installer Docker via le script officiel
-      ansible.builtin.shell: |
-        curl -fsSL https://get.docker.com -o get-docker.sh
-        sh get-docker.sh
-      args:
-        creates: /usr/bin/docker  # Assure que cette tâche ne se réexécute pas si Docker est déjà installé
-  
+    - name: Supprimer l'ancien Docker CentOS (s'il existe)
+      ansible.builtin.yum:
+        name:
+          - docker
+          - docker-client
+          - docker-client-latest
+          - docker-common
+          - docker-latest
+          - docker-latest-logrotate
+          - docker-logrotate
+          - docker-engine
+        state: absent
+
+    - name: Ajouter le dépôt Docker CE
+      ansible.builtin.yum_repository:
+        name: docker-ce-stable
+        description: Docker CE Stable - $releasever
+        baseurl: https://download.docker.com/linux/centos/7/$basearch/stable
+        gpgcheck: yes
+        gpgkey: https://download.docker.com/linux/centos/gpg
+        enabled: yes
+
+    - name: Installer Docker CE récent
+      ansible.builtin.yum:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+        state: present
+
     - name: Assurez-vous que Docker est démarré et activé au démarrage
       ansible.builtin.service:
         name: docker
         state: started
         enabled: true
 
-    - name: Télécharger Docker Compose
+    - name: Télécharger Docker Compose binaire
       ansible.builtin.get_url:
         url: "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-{{ ansible_system }}-{{ ansible_architecture }}"
         dest: /usr/local/bin/docker-compose
         mode: '0755'
 
-    - name: Ajouter les permissions d'exécution à Docker Compose
-      ansible.builtin.file:
-        path: /usr/local/bin/docker-compose
-        mode: '0755'
-        state: file
   roles:
     - { role: ansible-role-containerized-wordpress}

@@ -3,8 +3,7 @@
   hosts: prod
   become: true
   vars:
-     ansible_sudo_pass: admin
-     ansible_python_interpreter: /usr/bin/python3
+    ansible_python_interpreter: /usr/bin/python3
   pre_tasks:
     - name: Install EPEL repo
       package: name={{ item }} state=present
@@ -25,7 +24,7 @@
       pip:
         name: docker
         executable: pip3
-
+        
   tasks:
     - name: Copy website file template
       template:
@@ -36,6 +35,6 @@
         name: webapp
         image: httpd:2.2
         ports:
-          - "8080:80"
+          - "80:80"
         volumes: 
          - /home/admin/index.html:/usr/local/apache2/htdocs/index.html
